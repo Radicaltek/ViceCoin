@@ -1,0 +1,152 @@
+// SPDX-License-Identifier: MIT pragma solidity ^0.8.19;
+
+import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol"; import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract AIQueryOracle is ChainlinkClient, Ownable { using Chainlink for Chainlink.Request;
+
+address private oracle;
+bytes32 private jobId;
+uint256 private fee;
+
+struct Query {
+    address user;
+    string question;
+    string answer;
+}
+
+mapping(bytes32 => Query) public queries;
+event QuerySubmitted(bytes32 indexed requestId, address indexed user, string question);
+event QueryAnswered(bytes32 indexed requestId, string answer);
+
+constructor(address _oracle, string memory _jobId, uint256 _fee, address _linkToken) {
+    setChainlinkToken(_linkToken);
+    oracle = _oracle;
+    jobId = stringToBytes32(_jobId);
+    fee = _fee;
+}
+
+function submitQuery(string memory _question) public returns (bytes32 requestId) {
+    Chainlink.Request memory request = buildChainlinkRequest(jobId, address(this), this.fulfill.selector);
+    request.add("query", _question);
+    requestId = sendChainlinkRequestTo(oracle, request, fee);
+    queries[requestId] = Query(msg.sender, _question, "");
+    emit QuerySubmitted(requestId, msg.sender, _question);
+}
+
+function fulfill(bytes32 _requestId, string memory _answer) public recordChainlinkFulfillment(_requestId) {
+    queries[_requestId].answer = _answer;
+    emit QueryAnswered(_requestId, _answer);
+}
+
+function setOracle(address _oracle) external onlyOwner {
+    oracle = _oracle;
+}
+
+function setJobId(string memory _jobId) external onlyOwner {
+    jobId = stringToBytes32(_jobId);
+}
+
+function setFee(uint256 _fee) external onlyOwner {
+    fee = _fee;
+}
+
+function stringToBytes32(string memory source) internal pure returns (bytes32 result) {
+    bytes memory tempEmptyStringTest = bytes(source);
+    if (tempEmptyStringTest.length == 0) {
+        return 0x0;
+    }
+    assembly {
+        result := mload(add(source, 32))
+    }
+}
+
+}
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.19;
+
+import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract AIQueryOracle is ChainlinkClient, Ownable {
+    using Chainlink for Chainlink.Request;
+
+    address private oracle;
+    bytes32 private jobId;
+    uint256 private fee;
+
+    struct Query {
+        address user;
+        string question;
+        string answer;
+    }
+    
+    mapping(bytes32 => Query) public queries;
+    event QuerySubmitted(bytes32 indexed requestId, address indexed user, string question);
+    event QueryAnswered(bytes32 indexed requestId, string answer);
+
+    constructor(address _oracle, string memory _jobId, uint256 _fee, address _linkToken) {
+        setChainlinkToken(_linkToken);
+        oracle = _oracle;
+        jobId = stringToBytes32(_jobId);
+        fee = _fee;
+    }
+
+    function submitQuery(string memory _question) public returns (bytes32 requestId) {
+        Chainlink.Request memory request = buildChainlinkRequest(jobId, address(this), this.fulfill.selector);
+        request.add("query", _question);
+        requestId = sendChainlinkRequestTo(oracle, request, fee);
+        queries[requestId] = Query(msg.sender, _question, "");
+        emit QuerySubmitted(requestId, msg.sender, _question);
+    }
+
+    function fulfill(bytes32 _requestId, string memory _answer) public recordChainlinkFulfillment(_requestId) {
+        queries[_requestId].answer = _answer;
+        emit QueryAnswered(_requestId, _answer);
+    }
+
+    function setOracle(address _oracle) external onlyOwner {
+        oracle = _oracle;
+    }
+
+    function setJobId(string memory _jobId) external onlyOwner {
+        jobId = stringToBytes32(_jobId);
+    }
+
+    function setFee(uint256 _fee) external onlyOwner {
+        fee = _fee;
+    }
+
+    function stringToBytes32(string memory source) internal pure returns (bytes32 result) {
+        bytes memory tempEmptyStringTest = bytes(source);
+        if (tempEmptyStringTest.length == 0) {
+            return 0x0;
+        }
+        assembly {
+            result := mload(add(source, 32))
+        }
+    }
+}
+
+
+How It Works:
+
+1. User submits a query: Calls submitQuery(string memory _question).
+
+
+2. Chainlink Oracle fetches data: The contract requests an answer from an external AI API.
+
+
+3. Response is recorded: The function fulfill(bytes32 _requestId, string memory _answer) stores and emits the answer.
+
+
+
+Setup Requirements:
+
+Deploy with a Chainlink oracle, job ID, LINK token address, and fee.
+
+The off-chain AI bot must be accessible via an API.
+
+
+Would you like additional features such as response tracking or query limitations?
+
